@@ -1,10 +1,11 @@
-from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QFileDialog, QVBoxLayout, QHBoxLayout, QWidget, QTextEdit
+from PySide6.QtWidgets import QMainWindow, QPushButton, QLabel, QLineEdit, QFileDialog, QVBoxLayout, QHBoxLayout, QWidget, QTextEdit,QColorDialog
 from utils.read_excel import read_excel_range
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
+from reportlab.lib.colors import HexColor
 import io
 
 class NameplateGeneratorGUI(QMainWindow):
@@ -28,6 +29,9 @@ class NameplateGeneratorGUI(QMainWindow):
         self.font_path_input = QLineEdit()
         self.font_path_button = QPushButton("Select Font")
         self.font_path_button.clicked.connect(self.select_font_path)
+
+        self.hex_color_label = QLabel("색상코드 (HEX)")
+        self.hex_color_input = QLineEdit()
 
         # 조 이름, 범위, 결과물 저장 경로, 생성 버튼, 로그 위젯
         self.team_name_label = QLabel("조이름")
@@ -83,6 +87,18 @@ class NameplateGeneratorGUI(QMainWindow):
         font_path_layout.addWidget(self.font_path_input)
         font_path_layout.addWidget(self.font_path_button)
 
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(self.hex_color_label)
+        color_layout.addWidget(self.hex_color_input )
+
+        team_layout = QHBoxLayout()
+        team_layout.addWidget(self.team_name_label)
+        team_layout.addWidget(self.team_name_input)
+
+        range_layout = QHBoxLayout()
+        range_layout.addWidget(self.range_label)
+        range_layout.addWidget(self.range_input)
+
         team_name_layout = QHBoxLayout()
         team_name_layout.addWidget(self.team_name_position_label)
         team_name_layout.addWidget(self.team_name_position_input)
@@ -111,10 +127,9 @@ class NameplateGeneratorGUI(QMainWindow):
         main_layout.addLayout(file_layout)
         main_layout.addLayout(background_layout)
         main_layout.addLayout(font_path_layout)
-        main_layout.addWidget(self.team_name_label)
-        main_layout.addWidget(self.team_name_input)
-        main_layout.addWidget(self.range_label)
-        main_layout.addWidget(self.range_input)
+        main_layout.addLayout(color_layout)
+        main_layout.addLayout(team_layout)
+        main_layout.addLayout(range_layout)
         main_layout.addLayout(team_name_layout)
         main_layout.addLayout(student_id_layout)
         main_layout.addLayout(name_layout)
@@ -157,6 +172,18 @@ class NameplateGeneratorGUI(QMainWindow):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder")
         if folder_path:
             self.save_path_input.setText(folder_path)
+    def select_text_color(self):
+        color_dialog = QColorDialog()
+        color = color_dialog.getColor()
+        if color.isValid():
+            self.text_color = color.name()
+            # 모든 텍스트 필드의 색상 변경
+            self.set_text_field_color(self.team_name_input)
+            self.set_text_field_color(self.student_id_input)
+            self.set_text_field_color(self.name_input)
+
+    def set_text_field_color(self, text_field):
+        text_field.setStyleSheet(f"color: {self.text_color}")
 
     def generate_nameplate(self):
         # 사용자 입력 데이터 정리
@@ -166,7 +193,7 @@ class NameplateGeneratorGUI(QMainWindow):
         team_name = self.team_name_input.text()
         cell_range = self.range_input.text()
         save_path = self.save_path_input.text()
-
+        color = self.hex_color_input.text()
         try:
             team_name_position = float(self.team_name_position_input.text())
             team_name_font_size = int(self.team_name_font_size_input.text())
@@ -214,7 +241,7 @@ class NameplateGeneratorGUI(QMainWindow):
                 # 가운데 정렬을 위한 x 좌표 설정
 
                 center_x = page_width / 2
-
+                can.setFillColor(HexColor(color))
                 # 조이름 합성
                 can.setFont("CustomFont", team_name_font_size)
                 can.drawString(center_x - can.stringWidth(team_text) / 2,  page_height - (team_name_position * 2.9), team_text)
